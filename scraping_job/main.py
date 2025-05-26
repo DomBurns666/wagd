@@ -8,6 +8,7 @@ from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import time
+import re
 
 RESULTS_URL = "https://www.premierleague.com/results"
 
@@ -15,7 +16,7 @@ RESULTS_URL = "https://www.premierleague.com/results"
 def extract_html_from_page(url):
     # Setup Chrome options
     options = Options()
-    options.add_argument("--headless")  # Run Chrome in headless mode (no UI)
+    options.add_argument("--headless")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920x1080")
 
@@ -32,8 +33,6 @@ def extract_html_from_page(url):
         print("Initial results loaded!")
     except Exception as e:
         print("Error: Page took too long to load.")
-
-    # time.sleep(5)
 
     # Scroll to load all results
     last_height = driver.execute_script("return document.body.scrollHeight")
@@ -52,10 +51,43 @@ def extract_html_from_page(url):
     html = driver.page_source
     driver.quit()  # Close the browser
 
-    # Parse with BeautifulSoup
     soup = BeautifulSoup(html, "html.parser")
-    print(soup.prettify())  # Todo: remove later
+    # print(soup.prettify())  # Todo: remove later
 
-    return
+    return soup
 
-extract_html_from_page(RESULTS_URL)
+def extract_results_from_html(soup):
+    results = []
+    matches = soup.find_all("li", class_="match-fixture")
+    for match in matches:
+        home_team = match.get("data-home")
+        away_team = match.get("data-away")
+        status = match.get("data-comp-match-item-status")
+        match_id = match.get("data-comp-match-item")
+        venue = match.get("data-venue")
+
+        # Extract scores
+        score_span = match.find("span", class_="match-fixture__score")
+        if score_span:
+            # Remove whitespace and split by '-'
+            score_text = re.sub(r"\s+", "", score_span.get_text())
+            home_goals, away_goals = map(int, score_text.split("-"))
+        else:
+            home_goals = away_goals = None
+
+        results.append({
+            "home_team": home_team,
+            "away_team": away_team,
+            "home_goals": home_goals,
+            "away_goals": away_goals,
+            "venue": venue,
+            "status": status,
+            "match_id": match_id
+        })
+
+    print(results[0])  # Print the first result for verification
+    print(f"Total matches found: {len(results)}")
+    return results
+
+results_html = extract_html_from_page(RESULTS_URL)
+extract_results_from_html(results_html)
