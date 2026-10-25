@@ -1,140 +1,123 @@
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from webdriver_manager.chrome import ChromeDriverManager
+import requests
 from bs4 import BeautifulSoup
+import pandas as pd
+from datetime import datetime
 import time
-import re
-import datetime
+import random
 
-RESULTS_URL = "https://www.premierleague.com/results"
-BASE_STRENGTH = 1000
-K = 10  # scaling factor for strength change
+try:
+    from scraping_job.csv_extractor import extract_results_from_csv
+except ImportError:
+    from csv_extractor import extract_results_from_csv
 
-def extract_html_from_page(url):
-    # Setup Chrome options
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920x1080")
+def get_soup(url):
+    """Get the BeautifulSoup object for a URL with headers to mimic a browser"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return BeautifulSoup(response.text, 'html.parser')
 
-    # Initialize WebDriver
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
-
-    driver.get(url)
-    # Wait for the results container to appear
+def extract_match_data(match):
+    """Extract match data from a match element"""
     try:
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "fixtures__matches-list"))
-        )
-        print("Initial results loaded!")
-    except Exception as e:
-        print("Error: Page took too long to load.")
-
-    # Scroll to load all results
-    last_height = driver.execute_script("return document.body.scrollHeight")
-    while True:
-        driver.find_element(By.TAG_NAME, "body").send_keys(Keys.END)  # Scroll to the bottom
-        time.sleep(2)  # Wait for new results to load
-
-        new_height = driver.execute_script("return document.body.scrollHeight")
-        if new_height == last_height:  # If no new content is loaded, stop scrolling
-            break
-        last_height = new_height
-
-    print("All results loaded!")
-
-    # Get the page source after JavaScript execution
-    html = driver.page_source
-    driver.quit()  # Close the browser
-
-    soup = BeautifulSoup(html, "html.parser")
-    # print(soup.prettify())  # Todo: remove later
-
-    return soup
-
-def extract_results_from_html(soup):
-    results = []
-    matches = soup.find_all("li", class_="match-fixture")
-    for match in matches:
-        home_team = match.get("data-home")
-        away_team = match.get("data-away")
-        status = match.get("data-comp-match-item-status")
-        match_id = match.get("data-comp-match-item")
-        venue = match.get("data-venue")
-        ko_timestamp = match.get("data-comp-match-item-ko")
-        kickoff_datetime = None
-        if ko_timestamp:
-            kickoff_datetime = datetime.datetime.fromtimestamp(int(ko_timestamp) // 1000)
-
-        # Extract scores
-        score_span = match.find("span", class_="match-fixture__score")
-        if score_span:
-            score_text = re.sub(r"\s+", "", score_span.get_text())
-            home_goals, away_goals = map(int, score_text.split("-"))
+        # Extract team names
+        teams = [team.get_text(strip=True) for team in match.select('.matches__item-col--side')]
+        if len(teams) != 2:
+            return None
+            
+        home_team, away_team = teams[0], teams[1]
+        
+        # Extract score
+        score_element = match.select_one('.matches__teamscores')
+        if not score_element:
+            return None
+            
+        score_parts = [p.get_text(strip=True) for p in score_element.select('span')]
+        if len(score_parts) < 2:
+            return None
+            
+        home_goals, away_goals = score_parts[0], score_parts[1]
+        
+        # Extract match date
+        date_element = match.select_one('.matches__date')
+        match_date = date_element.get('data-time') if date_element else None
+        if match_date:
+            try:
+                match_date = datetime.fromisoformat(match_date.replace('Z', '+00:00'))
+            except:
+                match_date = datetime.now()
         else:
-            home_goals = away_goals = None
+            match_date = datetime.now()
+            
+        return {
+            'date': match_date,
+            'home_team': home_team,
+            'away_team': away_team,
+            'home_goals': int(home_goals) if home_goals.isdigit() else None,
+            'away_goals': int(away_goals) if away_goals.isdigit() else None
+        }
+    except Exception as e:
+        print(f"Error extracting match data: {e}")
+        return None
 
-        results.append({
-            "home_team": home_team,
-            "away_team": away_team,
-            "home_goals": home_goals,
-            "away_goals": away_goals,
-            "venue": venue,
-            "status": status,
-            "match_id": match_id,
-            "kickoff_datetime": kickoff_datetime
-        })
+def scrape_premier_league_results():
+    """Scrape Premier League results from Sky Sports"""
+    url = "https://www.skysports.com/premier-league-results/2024-25"
+    print(f"Scraping results from: {url}")
+    
+    try:
+        soup = get_soup(url)
+        matches = soup.select('.matches__item')
+        
+        if not matches:
+            print("No matches found on the page")
+            return []
+            
+        results = []
+        for match in matches:
+            match_data = extract_match_data(match)
+            if match_data:
+                results.append(match_data)
+                
+        print(f"Successfully extracted {len(results)} matches")
+        return results
+        
+    except Exception as e:
+        print(f"Error scraping results: {e}")
+        return []
 
-    print(results[0])  # Print the first result for verification
-    print(f"Total matches found: {len(results)}")
-    return results
+def main():
+    print("Loading Premier League results from dataset...")
+    start_time = time.time()
+    
+    try:
+        # Web scraping code is kept as dead code for now:
+        # results = scrape_premier_league_results()
+        results = extract_results_from_csv()
+        
+        if results:
+            # Convert to DataFrame for better display and analysis
+            df = pd.DataFrame(results)
+            df = df.sort_values('date')
+            
+            print(f"Successfully loaded {len(results)} matches.")
+            print("\n=== Match Results (First 10) ===")
+            print(df[['date', 'home_team', 'home_goals', 'away_goals', 'away_team']].head(10).to_string(index=False))
+            
+            # Save to CSV
+            csv_filename = 'premier_league_results.csv'
+            df.to_csv(csv_filename, index=False)
+            print(f"\nResults saved to {csv_filename}")
+        else:
+            print("No results were found.")
+            
+    except Exception as e:
+        print(f"\nAn error occurred: {e}")
+        
+    finally:
+        print(f"\nScript completed in {time.time() - start_time:.2f} seconds")
 
-def calculate_team_strengths(results):
-    team_strengths = {}
-    strength_history = []
-
-    for match in sorted(results, key=lambda x: x['kickoff_datetime']):
-        home = match['home_team']
-        away = match['away_team']
-        home_goals = match['home_goals']
-        away_goals = match['away_goals']
-        date = match['kickoff_datetime']
-
-        # Initialize strengths if not present
-        if home not in team_strengths:
-            team_strengths[home] = BASE_STRENGTH
-        if away not in team_strengths:
-            team_strengths[away] = BASE_STRENGTH
-
-        # Calculate strength change
-        home_gain = K * home_goals * (team_strengths[away] / BASE_STRENGTH)
-        away_gain = K * away_goals * (team_strengths[home] / BASE_STRENGTH)
-
-        team_strengths[home] += home_gain
-        team_strengths[away] += away_gain
-
-        # Record strengths after this match
-        strength_history.append({
-            'date': date,
-            'team': home,
-            'strength': team_strengths[home]
-        })
-        strength_history.append({
-            'date': date,
-            'team': away,
-            'strength': team_strengths[away]
-        })
-
-    return strength_history
-
-results_html = extract_html_from_page(RESULTS_URL)
-results = extract_results_from_html(results_html)
-strength_history = calculate_team_strengths(results)
-print(strength_history[:5])  # See first few records
-
+if __name__ == "__main__":
+    main()
