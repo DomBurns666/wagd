@@ -43,6 +43,10 @@ class GoalEloEngine:
         matches_played: Dict[str, int] = {}
         goals_for: Dict[str, int] = {}
         goals_against: Dict[str, int] = {}
+        official_points: Dict[str, int] = {}
+        official_wins: Dict[str, int] = {}
+        official_draws: Dict[str, int] = {}
+        official_losses: Dict[str, int] = {}
         history_by_matchday: Dict[str, List[Dict[str, Any]]] = {}
 
         # Discover all teams
@@ -53,6 +57,10 @@ class GoalEloEngine:
                     matches_played[team] = 0
                     goals_for[team] = 0
                     goals_against[team] = 0
+                    official_points[team] = 0
+                    official_wins[team] = 0
+                    official_draws[team] = 0
+                    official_losses[team] = 0
                     history_by_matchday[team] = [{
                         "matchday": 0,
                         "rating": round(self.base_rating, 2),
@@ -107,6 +115,23 @@ class GoalEloEngine:
             goals_for[away] += m["away_goals"]
             goals_against[away] += m["home_goals"]
 
+            # Track official Premier League match points (3 for win, 1 for draw)
+            hg = m["home_goals"]
+            ag = m["away_goals"]
+            if hg > ag:
+                official_points[home] += 3
+                official_wins[home] += 1
+                official_losses[away] += 1
+            elif hg < ag:
+                official_points[away] += 3
+                official_wins[away] += 1
+                official_losses[home] += 1
+            else:
+                official_points[home] += 1
+                official_points[away] += 1
+                official_draws[home] += 1
+                official_draws[away] += 1
+
             home_delta = post_home - pre_home
             away_delta = post_away - pre_away
 
@@ -142,10 +167,20 @@ class GoalEloEngine:
                 "away_delta": round(away_delta, 2),
             })
 
-        # Calculate final leaderboard
+        # Calculate official Premier League standings
+        official_sorted = sorted(
+            ratings.keys(),
+            key=lambda t: (official_points[t], goals_for[t] - goals_against[t], goals_for[t]),
+            reverse=True
+        )
+        official_ranks = {t: off_rank for off_rank, t in enumerate(official_sorted, start=1)}
+
+        # Calculate final WAGD leaderboard
         sorted_teams = sorted(ratings.keys(), key=lambda t: ratings[t], reverse=True)
         leaderboard = []
         for rank, team in enumerate(sorted_teams, start=1):
+            off_rank = official_ranks[team]
+            rank_diff = off_rank - rank  # Positive means WAGD rates higher than official table
             leaderboard.append({
                 "rank": rank,
                 "team": team,
@@ -155,6 +190,12 @@ class GoalEloEngine:
                 "goals_for": goals_for[team],
                 "goals_against": goals_against[team],
                 "goal_difference": goals_for[team] - goals_against[team],
+                "official_rank": off_rank,
+                "official_points": official_points[team],
+                "official_wins": official_wins[team],
+                "official_draws": official_draws[team],
+                "official_losses": official_losses[team],
+                "rank_diff": rank_diff,
             })
 
         return {
@@ -167,9 +208,11 @@ class GoalEloEngine:
         }
 
 
-def get_goal_elo_results(csv_path=None, base_rating=DEFAULT_BASE_RATING, k_factor=DEFAULT_K_FACTOR) -> Dict[str, Any]:
-    """Helper to run the pipeline end-to-end from CSV to Elo results."""
-    from scraping_job.csv_extractor import extract_results_from_csv
+def get_goal_elo_results(csv_path=None, base_rating=DEFAULT_BASE_RATING, k_factor=DEFAULT_K_FACTOR, season_id=None) -> Dict[str, Any]:
+    """Helper to run the pipeline end-to-end from CSV to Elo results for a given season."""
+    from scraping_job.csv_extractor import extract_results_from_csv, get_default_csv_path
+    if csv_path is None:
+        csv_path = get_default_csv_path(season_id)
     matches = extract_results_from_csv(csv_path)
     engine = GoalEloEngine(base_rating=base_rating, k_factor=k_factor)
     return engine.process_matches(matches)

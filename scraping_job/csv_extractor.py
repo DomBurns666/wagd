@@ -1,12 +1,50 @@
+import re
 from pathlib import Path
 from datetime import datetime
+from typing import List, Dict, Optional
 import pandas as pd
 
 
-def get_default_csv_path() -> Path:
-    # Resolve relative to repo root: scraping_job/../data/E0.csv
+def get_data_dir() -> Path:
     repo_root = Path(__file__).resolve().parent.parent
-    return repo_root / "data" / "E0.csv"
+    return repo_root / "data"
+
+
+def get_available_seasons() -> List[Dict[str, str]]:
+    """Returns a list of all available seasons found in the data directory, newest first."""
+    data_dir = get_data_dir()
+    seasons = []
+    for p in sorted(data_dir.glob("premier_league_*.csv"), reverse=True):
+        m = re.search(r"premier_league_(\d{4})_(\d{4})\.csv", p.name)
+        if m:
+            y1, y2 = m.groups()
+            seasons.append({
+                "id": f"{y1}-{y2}",
+                "label": f"{y1}/{y2[2:]}",
+                "display_name": f"{y1}-{y2} Season",
+                "file_name": p.name,
+                "path": str(p),
+            })
+    return seasons
+
+
+def get_default_csv_path(season_id: Optional[str] = None) -> Path:
+    data_dir = get_data_dir()
+    if season_id:
+        # Match by id like 2024-2025 or 2024_2025 or filename
+        clean_id = season_id.replace("/", "-").replace("_", "-")
+        for s in get_available_seasons():
+            if s["id"] == clean_id or s["label"] == season_id or s["file_name"] == season_id:
+                return Path(s["path"])
+        # Fallback direct path check
+        candidate = data_dir / f"premier_league_{clean_id.replace('-', '_')}.csv"
+        if candidate.exists():
+            return candidate
+
+    seasons = get_available_seasons()
+    if seasons:
+        return Path(seasons[0]["path"])
+    return data_dir / "premier_league_2025_2026.csv"
 
 
 def extract_results_from_csv(csv_path=None):

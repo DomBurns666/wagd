@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from rating_engine import get_goal_elo_results
+from scraping_job.csv_extractor import get_available_seasons
 
 app = FastAPI(
     title="WAGD - Premier League Goal-Elo Rating System",
@@ -27,45 +28,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory cached rating results
-_CACHED_DATA = None
+# In-memory cached rating results by season
+_SEASON_CACHE = {}
 
 
-def get_cached_ratings():
-    global _CACHED_DATA
-    if _CACHED_DATA is None:
-        _CACHED_DATA = get_goal_elo_results()
-    return _CACHED_DATA
+def get_cached_ratings(season_id: Optional[str] = None):
+    seasons = get_available_seasons()
+    selected_season = season_id if season_id else (seasons[0]["id"] if seasons else "2025-2026")
+    if selected_season not in _SEASON_CACHE:
+        _SEASON_CACHE[selected_season] = get_goal_elo_results(season_id=selected_season)
+    return _SEASON_CACHE[selected_season]
+
+
+@app.get("/api/seasons")
+def get_seasons():
+    return {"seasons": get_available_seasons()}
 
 
 @app.get("/api/summary")
-def get_summary():
-    data = get_cached_ratings()
+def get_summary(season: Optional[str] = None):
+    data = get_cached_ratings(season)
     leaderboard = data["leaderboard"]
-    biggest_climber = max(leaderboard, key=lambda x: x["delta_total"])
-    biggest_dropper = min(leaderboard, key=lambda x: x["delta_total"])
     top_team = leaderboard[0]
+    bottom_team = leaderboard[-1]
+    total_goals = sum(row["goals_for"] for row in leaderboard)
 
     return {
+        "season": season or (get_available_seasons()[0]["id"] if get_available_seasons() else "2025-2026"),
         "total_matches": data["total_matches"],
         "base_rating": data["base_rating"],
         "k_factor": data["k_factor"],
         "top_rated": top_team,
-        "biggest_climber": biggest_climber,
-        "biggest_dropper": biggest_dropper,
+        "bottom_rated": bottom_team,
+        "total_goals": total_goals,
         "total_teams": len(leaderboard),
     }
 
 
 @app.get("/api/leaderboard")
-def get_leaderboard():
-    data = get_cached_ratings()
+def get_leaderboard(season: Optional[str] = None):
+    data = get_cached_ratings(season)
     return {"leaderboard": data["leaderboard"]}
 
 
 @app.get("/api/history")
-def get_history(team: Optional[str] = None):
-    data = get_cached_ratings()
+def get_history(season: Optional[str] = None, team: Optional[str] = None):
+    data = get_cached_ratings(season)
     histories = data["team_histories"]
     if team:
         if team not in histories:
@@ -75,8 +83,8 @@ def get_history(team: Optional[str] = None):
 
 
 @app.get("/api/matches")
-def get_matches(limit: int = 50, team: Optional[str] = None):
-    data = get_cached_ratings()
+def get_matches(season: Optional[str] = None, limit: int = 50, team: Optional[str] = None):
+    data = get_cached_ratings(season)
     matches = data["processed_matches"]
     if team:
         matches = [m for m in matches if m["home_team"] == team or m["away_team"] == team]
@@ -139,7 +147,13 @@ def get_dashboard():
           <p class="text-xs text-gray-400">Premier League Dynamic Ratings via Quality-Weighted Goal Exchanges</p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <label for="season-select" class="text-xs text-gray-400 font-medium">Season:</label>
+          <select id="season-select" onchange="onSeasonChange()" class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-700 focus:outline-none focus:border-emerald-500 cursor-pointer transition">
+          </select>
+        </div>
+        <div class="h-5 w-px bg-gray-800 hidden sm:block"></div>
         <a href="/" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
           Dashboard
         </a>
@@ -158,18 +172,18 @@ def get_dashboard():
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-container">
       <div class="glass-card rounded-xl p-5 shadow-lg">
         <div class="text-xs font-medium uppercase tracking-wider text-gray-400">#1 Top Rated Team</div>
-        <div class="text-2xl font-black mt-1 text-white" id="kpi-top-team">...</div>
-        <div class="text-xs mt-2 text-emerald-400 flex items-center gap-1" id="kpi-top-rating">...</div>
+        <div class="text-2xl font-black mt-1 text-emerald-400" id="kpi-top-team">...</div>
+        <div class="text-xs mt-2 text-gray-400 flex items-center gap-1" id="kpi-top-rating">...</div>
       </div>
       <div class="glass-card rounded-xl p-5 shadow-lg">
-        <div class="text-xs font-medium uppercase tracking-wider text-gray-400">Biggest Climber</div>
-        <div class="text-2xl font-black mt-1 text-emerald-400" id="kpi-climber-team">...</div>
-        <div class="text-xs mt-2 text-gray-400" id="kpi-climber-delta">...</div>
+        <div class="text-xs font-medium uppercase tracking-wider text-gray-400">#20 Lowest Rated Team</div>
+        <div class="text-2xl font-black mt-1 text-rose-400" id="kpi-bottom-team">...</div>
+        <div class="text-xs mt-2 text-gray-400 flex items-center gap-1" id="kpi-bottom-rating">...</div>
       </div>
       <div class="glass-card rounded-xl p-5 shadow-lg">
-        <div class="text-xs font-medium uppercase tracking-wider text-gray-400">Biggest Dropper</div>
-        <div class="text-2xl font-black mt-1 text-rose-400" id="kpi-dropper-team">...</div>
-        <div class="text-xs mt-2 text-gray-400" id="kpi-dropper-delta">...</div>
+        <div class="text-xs font-medium uppercase tracking-wider text-gray-400">Season Goals Scored</div>
+        <div class="text-2xl font-black mt-1 text-amber-400" id="kpi-total-goals">...</div>
+        <div class="text-xs mt-2 text-gray-400" id="kpi-goals-per-match">...</div>
       </div>
       <div class="glass-card rounded-xl p-5 shadow-lg">
         <div class="text-xs font-medium uppercase tracking-wider text-gray-400">Matches Processed</div>
@@ -215,11 +229,13 @@ def get_dashboard():
           <table class="w-full text-left text-sm text-gray-300">
             <thead class="text-xs uppercase bg-gray-900/60 text-gray-400">
               <tr>
-                <th class="py-3 px-3">#</th>
+                <th class="py-3 px-3">WAGD</th>
                 <th class="py-3 px-3">Team</th>
                 <th class="py-3 px-3 text-right">Rating</th>
-                <th class="py-3 px-3 text-right">Net Change</th>
-                <th class="py-3 px-3 text-center">P</th>
+                <th class="py-3 px-3 text-right">WAGD Δ</th>
+                <th class="py-3 px-3 text-center">Table Pos</th>
+                <th class="py-3 px-3 text-center">Variance</th>
+                <th class="py-3 px-3 text-center">Pts</th>
                 <th class="py-3 px-3 text-center">GF</th>
                 <th class="py-3 px-3 text-center">GA</th>
                 <th class="py-3 px-3 text-center">GD</th>
@@ -257,46 +273,72 @@ def get_dashboard():
       'Brentford': '#ea580c',
       'Brighton': '#0284c7',
       'Burnley': '#991b1b',
+      'Cardiff': '#1d4ed8',
       'Chelsea': '#2563eb',
       'Crystal Palace': '#3b82f6',
-      'Everton': '#1d4ed8',
+      'Everton': '#1e40af',
       'Fulham': '#64748b',
+      'Huddersfield': '#38bdf8',
+      'Hull': '#d97706',
+      'Ipswich': '#2563eb',
       'Leeds': '#eab308',
+      'Leicester': '#1d4ed8',
       'Liverpool': '#b91c1c',
+      'Luton': '#f97316',
       'Man City': '#38bdf8',
       'Man United': '#e11d48',
+      'Middlesbrough': '#dc2626',
       'Newcastle': '#f8fafc',
+      'Norwich': '#eab308',
       "Nott'm Forest": '#f43f5e',
+      'Sheffield United': '#ef4444',
+      'Southampton': '#dc2626',
+      'Stoke': '#ef4444',
       'Sunderland': '#fb923c',
+      'Swansea': '#f8fafc',
       'Tottenham': '#94a3b8',
+      'Watford': '#eab308',
+      'West Brom': '#1e3a8a',
       'West Ham': '#be123c',
       'Wolves': '#f59e0b',
     };
 
+    function getTeamColor(team) {
+      if (TEAM_COLORS[team]) return TEAM_COLORS[team];
+      let hash = 0;
+      for (let i = 0; i < team.length; i++) hash = team.charCodeAt(i) + ((hash << 5) - hash);
+      const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+      return '#' + '00000'.substring(0, 6 - c.length) + c;
+    }
+
     let chartInstance = null;
     let allHistories = {};
     let leaderboardData = [];
+    let currentSeason = '';
 
-    async function loadData() {
+    async function loadData(season) {
+      const q = season ? `?season=${encodeURIComponent(season)}` : '';
       const [sumRes, leadRes, histRes, matchRes] = await Promise.all([
-        fetch('/api/summary').then(r => r.json()),
-        fetch('/api/leaderboard').then(r => r.json()),
-        fetch('/api/history').then(r => r.json()),
-        fetch('/api/matches?limit=380').then(r => r.json())
+        fetch('/api/summary' + q).then(r => r.json()),
+        fetch('/api/leaderboard' + q).then(r => r.json()),
+        fetch('/api/history' + q).then(r => r.json()),
+        fetch('/api/matches?limit=380' + (season ? `&season=${encodeURIComponent(season)}` : '')).then(r => r.json())
       ]);
 
       leaderboardData = leadRes.leaderboard;
       allHistories = histRes.histories;
+      currentSeason = sumRes.season;
 
       // Update KPIs
       document.getElementById('kpi-top-team').innerText = sumRes.top_rated.team;
       document.getElementById('kpi-top-rating').innerText = `Rating: ${sumRes.top_rated.rating} (Δ ${sumRes.top_rated.delta_total > 0 ? '+' : ''}${sumRes.top_rated.delta_total})`;
 
-      document.getElementById('kpi-climber-team').innerText = sumRes.biggest_climber.team;
-      document.getElementById('kpi-climber-delta').innerText = `Gained +${sumRes.biggest_climber.delta_total} points (#${sumRes.biggest_climber.rank})`;
+      document.getElementById('kpi-bottom-team').innerText = sumRes.bottom_rated.team;
+      document.getElementById('kpi-bottom-rating').innerText = `Rating: ${sumRes.bottom_rated.rating} (Δ ${sumRes.bottom_rated.delta_total})`;
 
-      document.getElementById('kpi-dropper-team').innerText = sumRes.biggest_dropper.team;
-      document.getElementById('kpi-dropper-delta').innerText = `Lost ${sumRes.biggest_dropper.delta_total} points (#${sumRes.biggest_dropper.rank})`;
+      document.getElementById('kpi-total-goals').innerText = sumRes.total_goals;
+      const goalsPerMatch = (sumRes.total_goals / sumRes.total_matches).toFixed(2);
+      document.getElementById('kpi-goals-per-match').innerText = `${goalsPerMatch} goals / match`;
 
       document.getElementById('kpi-matches').innerText = sumRes.total_matches;
 
@@ -306,19 +348,28 @@ def get_dashboard():
         const deltaClass = row.delta_total >= 0 ? 'text-emerald-400 bg-emerald-500/10' : 'text-rose-400 bg-rose-500/10';
         const sign = row.delta_total >= 0 ? '+' : '';
         const rankBadge = row.rank <= 4 ? 'bg-indigo-500/20 text-indigo-300 font-bold' : (row.rank >= 18 ? 'bg-rose-500/20 text-rose-300' : 'text-gray-400');
+        
+        const rankDiff = row.rank_diff;
+        const diffBadge = rankDiff > 0 
+          ? `<span class="px-2 py-0.5 rounded text-xs font-bold text-emerald-400 bg-emerald-500/15">+${rankDiff}</span>`
+          : (rankDiff < 0 
+              ? `<span class="px-2 py-0.5 rounded text-xs font-bold text-rose-400 bg-rose-500/15">${rankDiff}</span>`
+              : `<span class="px-2 py-0.5 rounded text-xs text-gray-400 bg-gray-800">=</span>`);
 
         return `
           <tr data-team="${row.team}" class="hover:bg-gray-800/40 transition cursor-pointer" onclick="isolateTeam('${row.team}')">
             <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-xs ${rankBadge}">${row.rank}</span></td>
             <td class="py-3 px-3 font-semibold text-white flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${TEAM_COLORS[row.team] || '#a855f7'}"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${getTeamColor(row.team)}"></span>
               ${row.team}
             </td>
             <td class="py-3 px-3 text-right font-mono font-bold text-gray-100">${row.rating.toFixed(1)}</td>
             <td class="py-3 px-3 text-right font-mono">
               <span class="px-2 py-0.5 rounded text-xs font-semibold ${deltaClass}">${sign}${row.delta_total.toFixed(1)}</span>
             </td>
-            <td class="py-3 px-3 text-center text-gray-400">${row.matches_played}</td>
+            <td class="py-3 px-3 text-center font-mono text-gray-300">#${row.official_rank}</td>
+            <td class="py-3 px-3 text-center">${diffBadge}</td>
+            <td class="py-3 px-3 text-center font-mono font-bold text-gray-200">${row.official_points}</td>
             <td class="py-3 px-3 text-center text-gray-300">${row.goals_for}</td>
             <td class="py-3 px-3 text-center text-gray-400">${row.goals_against}</td>
             <td class="py-3 px-3 text-center font-semibold ${row.goal_difference >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
@@ -359,10 +410,13 @@ def get_dashboard():
     }
 
     function renderChart(histories) {
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
       const matchdayLabels = Array.from({length: 39}, (_, i) => i === 0 ? 'Start' : `GW ${i}`);
       const sortedTeams = Object.keys(histories).sort();
       const datasets = sortedTeams.map(team => {
-        const teamColor = TEAM_COLORS[team] || '#9333ea';
+        const teamColor = getTeamColor(team);
         return {
           label: team,
           data: histories[team].map(h => h.rating),
@@ -504,7 +558,31 @@ def get_dashboard():
       chartInstance.update();
     }
 
-    window.addEventListener('DOMContentLoaded', loadData);
+    async function init() {
+      try {
+        const res = await fetch('/api/seasons').then(r => r.json());
+        const select = document.getElementById('season-select');
+        select.innerHTML = res.seasons.map(s => 
+          `<option value="${s.id}">${s.label} (${s.id})</option>`
+        ).join('');
+
+        currentSeason = res.seasons[0].id;
+        select.value = currentSeason;
+        await loadData(currentSeason);
+      } catch (err) {
+        console.error('Failed to initialize seasons:', err);
+      }
+    }
+
+    async function onSeasonChange() {
+      const select = document.getElementById('season-select');
+      currentSeason = select.value;
+      isolatedTeam = null;
+      updateFilterBadge(null);
+      await loadData(currentSeason);
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
