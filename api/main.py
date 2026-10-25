@@ -91,7 +91,15 @@ def get_dashboard():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WAGD | Premier League Goal-Elo Ratings</title>
+  <title>WAGD | Weight Adjusted Goal Difference</title>
+  <script>
+    // Suppress playground notice from Tailwind CDN in browser console
+    const _warn = console.warn;
+    console.warn = function(...args) {
+      if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+      _warn.apply(console, args);
+    };
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -129,9 +137,9 @@ def get_dashboard():
         </div>
         <div>
           <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-            WAGD <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Goal-Elo</span>
+            WAGD <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Weight Adjusted Goal Difference</span>
           </h1>
-          <p class="text-xs text-gray-400">Premier League Dynamic Ratings (1v1 Goal Exchange)</p>
+          <p class="text-xs text-gray-400">Premier League Dynamic Ratings via Quality-Weighted Goal Exchanges</p>
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -177,8 +185,11 @@ def get_dashboard():
     <div class="glass-card rounded-2xl p-6 shadow-xl">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
         <div>
-          <h2 class="text-lg font-bold text-white">Rating Trajectories Across 38 Matchdays</h2>
-          <p class="text-xs text-gray-400">Click any team in the legend or filters to isolate their progress over the season</p>
+          <div class="flex items-center gap-3">
+            <h2 class="text-lg font-bold text-white">Rating Trajectories Across 38 Matchdays</h2>
+            <span id="active-filter-indicator" class="hidden text-xs px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"></span>
+          </div>
+          <p class="text-xs text-gray-400">Click any line or table row to isolate a club (click again to restore all)</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button onclick="filterPresets('all')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition">Show All</button>
@@ -300,7 +311,7 @@ def get_dashboard():
         const rankBadge = row.rank <= 4 ? 'bg-indigo-500/20 text-indigo-300 font-bold' : (row.rank >= 18 ? 'bg-rose-500/20 text-rose-300' : 'text-gray-400');
 
         return `
-          <tr class="hover:bg-gray-800/40 transition cursor-pointer" onclick="highlightTeam('${row.team}')">
+          <tr data-team="${row.team}" class="hover:bg-gray-800/40 transition cursor-pointer" onclick="isolateTeam('${row.team}')">
             <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-xs ${rankBadge}">${row.rank}</span></td>
             <td class="py-3 px-3 font-semibold text-white flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${TEAM_COLORS[row.team] || '#a855f7'}"></span>
@@ -382,6 +393,14 @@ def get_dashboard():
             axis: 'x',
             intersect: false
           },
+          onClick: (event, elements, chart) => {
+            const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, true);
+            if (points && points.length > 0) {
+              const datasetIndex = points[0].datasetIndex;
+              const team = chart.data.datasets[datasetIndex].label;
+              isolateTeam(team);
+            }
+          },
           plugins: {
             legend: {
               display: true,
@@ -421,13 +440,63 @@ def get_dashboard():
       });
     }
 
+    let isolatedTeam = null;
+
+    function isolateTeam(team) {
+      if (!chartInstance) return;
+      if (isolatedTeam === team) {
+        // Toggle back to showing all
+        isolatedTeam = null;
+        chartInstance.data.datasets.forEach(ds => {
+          ds.hidden = false;
+          ds.borderWidth = 2;
+        });
+        updateFilterBadge(null);
+      } else {
+        // Isolate this team and filter out all others
+        isolatedTeam = team;
+        chartInstance.data.datasets.forEach(ds => {
+          if (ds.label === team) {
+            ds.hidden = false;
+            ds.borderWidth = 3.5;
+          } else {
+            ds.hidden = true;
+          }
+        });
+        updateFilterBadge(team);
+      }
+      chartInstance.update();
+    }
+
+    function updateFilterBadge(team) {
+      const badge = document.getElementById('active-filter-indicator');
+      if (badge) {
+        if (team) {
+          badge.innerHTML = `Isolated: <strong class="text-white">${team}</strong> <button onclick="filterPresets('all')" class="ml-1.5 text-xs text-rose-400 hover:text-rose-300 font-bold px-1.5 py-0.5 rounded bg-gray-800 border border-gray-700">Show All ×</button>`;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+      document.querySelectorAll('#leaderboard-body tr').forEach(tr => {
+        if (tr.dataset.team === team) {
+          tr.classList.add('bg-emerald-500/20');
+        } else {
+          tr.classList.remove('bg-emerald-500/20');
+        }
+      });
+    }
+
     function filterPresets(type) {
       if (!chartInstance) return;
+      isolatedTeam = null;
+      updateFilterBadge(null);
       const top5Teams = leaderboardData.slice(0, 5).map(x => x.team);
       const bottom5Teams = leaderboardData.slice(-5).map(x => x.team);
       const big6 = ['Arsenal', 'Chelsea', 'Liverpool', 'Man City', 'Man United', 'Tottenham'];
 
       chartInstance.data.datasets.forEach(ds => {
+        ds.borderWidth = 2;
         if (type === 'all') ds.hidden = false;
         else if (type === 'none') ds.hidden = true;
         else if (type === 'top5') ds.hidden = !top5Teams.includes(ds.label);
@@ -435,20 +504,6 @@ def get_dashboard():
         else if (type === 'big6') ds.hidden = !big6.includes(ds.label);
       });
       chartInstance.update();
-    }
-
-    function highlightTeam(team) {
-      if (!chartInstance) return;
-      chartInstance.data.datasets.forEach(ds => {
-        if (ds.label === team) {
-          ds.hidden = false;
-          ds.borderWidth = 4;
-        } else {
-          ds.borderWidth = 1.5;
-        }
-      });
-      chartInstance.update();
-      window.scrollTo({ top: 150, behavior: 'smooth' });
     }
 
     window.addEventListener('DOMContentLoaded', loadData);
@@ -466,7 +521,15 @@ def get_methodology():
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Methodology | WAGD Goal-Elo Ratings</title>
+  <title>Methodology | WAGD - Weight Adjusted Goal Difference</title>
+  <script>
+    // Suppress playground notice from Tailwind CDN in browser console
+    const _warn = console.warn;
+    console.warn = function(...args) {
+      if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+      _warn.apply(console, args);
+    };
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background-color: #0b0f19; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
@@ -486,7 +549,7 @@ def get_methodology():
           <a href="/" class="text-lg font-bold tracking-tight text-white flex items-center gap-2 hover:text-emerald-400 transition">
             WAGD <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Methodology</span>
           </a>
-          <p class="text-xs text-gray-400">Rating System Architecture & Mathematics</p>
+          <p class="text-xs text-gray-400">Weight Adjusted Goal Difference • Rating Architecture</p>
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -510,12 +573,45 @@ def get_methodology():
         System Overview
       </div>
       <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white">
-        How the Goal-Elo Rating System Works
+        What is WAGD? (Weight Adjusted Goal Difference)
       </h1>
       <p class="text-gray-400 text-base leading-relaxed">
-        WAGD transforms football match outcomes into dynamic, skill-calibrated team ratings using a zero-sum Elo framework adapted for individual goal exchanges.
+        <strong>WAGD</strong> stands for <strong>Weight Adjusted Goal Difference</strong>. It evaluates Premier League clubs not by crude goal counts or binary match points, but by dynamically adjusting the weight of every goal based on the strength of the opponent.
       </p>
     </div>
+
+    <!-- Section 0: Why the name WAGD? -->
+    <section class="glass-card rounded-2xl p-7 space-y-4 border-l-4 border-emerald-500">
+      <div class="flex items-center gap-3">
+        <span class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center text-sm">💡</span>
+        <h2 class="text-xl font-bold text-white">Why "Weight Adjusted Goal Difference"?</h2>
+      </div>
+      <p class="text-sm text-gray-300 leading-relaxed">
+        In standard football tables, <strong>Goal Difference (GD)</strong> is naive:
+      </p>
+      <div class="code-block rounded-xl p-3 text-sm text-gray-300">
+        Standard GD = Goals Scored - Goals Conceded
+      </div>
+      <p class="text-sm text-gray-300 leading-relaxed">
+        Every goal has an identical weight of <strong class="text-white">+1.0</strong> or <strong class="text-white">-1.0</strong>. Scoring against reigning champions Man City counts exactly the same as scoring against a relegated club.
+      </p>
+      <p class="text-sm text-gray-300 leading-relaxed">
+        <strong>WAGD fixes this fundamentally:</strong> Each goal is multiplied by a dynamic difficulty weight derived from the opponent's rating:
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
+        <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800">
+          <div class="font-bold text-emerald-400 text-sm">High-Weight Goal (Upset)</div>
+          <p class="text-gray-400 mt-1">Scoring against a dominant side has low expected probability (e.g. 15%), yielding a high reward weight (<strong>+12.8 pts</strong>).</p>
+        </div>
+        <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800">
+          <div class="font-bold text-gray-300 text-sm">Low-Weight Goal (Expected)</div>
+          <p class="text-gray-400 mt-1">Scoring against a struggling defense is expected (e.g. 85%), yielding a small incremental weight (<strong>+2.2 pts</strong>).</p>
+        </div>
+      </div>
+      <p class="text-xs text-gray-400 pt-1">
+        Over 38 matchdays, each club's rating deviation from the 1000 baseline represents their cumulative <strong>Weight Adjusted Goal Difference</strong>.
+      </p>
+    </section>
 
     <!-- Section 1: Core Philosophy -->
     <section class="glass-card rounded-2xl p-7 space-y-4">
