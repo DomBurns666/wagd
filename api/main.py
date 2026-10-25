@@ -132,9 +132,6 @@ def get_dashboard():
   <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-lg">
-          ⚽
-        </div>
         <div>
           <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
             WAGD <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Weight Adjusted Goal Difference</span>
@@ -363,7 +360,8 @@ def get_dashboard():
 
     function renderChart(histories) {
       const matchdayLabels = Array.from({length: 39}, (_, i) => i === 0 ? 'Start' : `GW ${i}`);
-      const datasets = Object.keys(histories).map(team => {
+      const sortedTeams = Object.keys(histories).sort();
+      const datasets = sortedTeams.map(team => {
         const teamColor = TEAM_COLORS[team] || '#9333ea';
         return {
           label: team,
@@ -542,9 +540,6 @@ def get_methodology():
   <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-50">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <a href="/" class="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-black text-lg hover:scale-105 transition">
-          ⚽
-        </a>
         <div>
           <a href="/" class="text-lg font-bold tracking-tight text-white flex items-center gap-2 hover:text-emerald-400 transition">
             WAGD <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Methodology</span>
