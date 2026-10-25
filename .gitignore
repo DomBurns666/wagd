@@ -1,0 +1,22 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*/__pycache__/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Generated runtime outputs
+premier_league_results.csv
+
+# Old scraping debug artifacts
+error_page.html
+season_selection_error.png
+
+# IDE / Editor
+.vscode/
+.DS_Store
+Thumbs.db
