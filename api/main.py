@@ -17,6 +17,9 @@ app = FastAPI(
     title="WAGD - Premier League Goal-Elo Rating System",
     description="Dynamic football team ratings based on goal-by-goal zero-sum exchanges.",
     version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # Enable CORS for frontend integration
@@ -159,9 +162,6 @@ def get_dashboard():
         </a>
         <a href="/methodology" class="text-xs font-medium text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700">
           Methodology
-        </a>
-        <a href="/docs" target="_blank" class="text-xs font-medium text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700">
-          API Docs
         </a>
       </div>
     </div>
@@ -631,9 +631,6 @@ def get_methodology():
         </a>
         <a href="/methodology" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
           Methodology
-        </a>
-        <a href="/docs" target="_blank" class="text-xs font-medium text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700">
-          API Docs
         </a>
       </div>
     </div>
