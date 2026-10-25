@@ -516,7 +516,7 @@ def get_dashboard():
 @app.get("/methodology", response_class=HTMLResponse)
 def get_methodology():
     """Serves an explanatory page detailing the Goal-Elo system and mathematics."""
-    return """<!DOCTYPE html>
+    return r"""<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
@@ -549,7 +549,7 @@ def get_methodology():
           <a href="/" class="text-lg font-bold tracking-tight text-white flex items-center gap-2 hover:text-emerald-400 transition">
             WAGD <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Methodology</span>
           </a>
-          <p class="text-xs text-gray-400">Weight Adjusted Goal Difference • Rating Architecture</p>
+          <p class="text-xs text-gray-400">Weight Adjusted Goal Difference • Formula & Mechanics</p>
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -570,197 +570,138 @@ def get_methodology():
     <!-- Hero / Title -->
     <div class="space-y-3">
       <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-        System Overview
+        Formula & Specifications
       </div>
       <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white">
-        What is WAGD? (Weight Adjusted Goal Difference)
+        WAGD Mathematical Formulation
       </h1>
       <p class="text-gray-400 text-base leading-relaxed">
-        <strong>WAGD</strong> stands for <strong>Weight Adjusted Goal Difference</strong>. It evaluates Premier League clubs not by crude goal counts or binary match points, but by dynamically adjusting the weight of every goal based on the strength of the opponent.
+        <strong>WAGD</strong> (Weight Adjusted Goal Difference) models team strength by treating each goal as a zero-sum rating exchange, weighted by the relative rating difference between the two teams at the moment the goal is scored.
       </p>
     </div>
 
-    <!-- Section 0: Why the name WAGD? -->
-    <section class="glass-card rounded-2xl p-7 space-y-4 border-l-4 border-emerald-500">
-      <div class="flex items-center gap-3">
-        <span class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center text-sm">💡</span>
-        <h2 class="text-xl font-bold text-white">Why "Weight Adjusted Goal Difference"?</h2>
-      </div>
-      <p class="text-sm text-gray-300 leading-relaxed">
-        In standard football tables, <strong>Goal Difference (GD)</strong> is naive:
-      </p>
-      <div class="code-block rounded-xl p-3 text-sm text-gray-300">
-        Standard GD = Goals Scored - Goals Conceded
-      </div>
-      <p class="text-sm text-gray-300 leading-relaxed">
-        Every goal has an identical weight of <strong class="text-white">+1.0</strong> or <strong class="text-white">-1.0</strong>. Scoring against reigning champions Man City counts exactly the same as scoring against a relegated club.
-      </p>
-      <p class="text-sm text-gray-300 leading-relaxed">
-        <strong>WAGD fixes this fundamentally:</strong> Each goal is multiplied by a dynamic difficulty weight derived from the opponent's rating:
-      </p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
-        <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800">
-          <div class="font-bold text-emerald-400 text-sm">High-Weight Goal (Upset)</div>
-          <p class="text-gray-400 mt-1">Scoring against a dominant side has low expected probability (e.g. 15%), yielding a high reward weight (<strong>+12.8 pts</strong>).</p>
-        </div>
-        <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800">
-          <div class="font-bold text-gray-300 text-sm">Low-Weight Goal (Expected)</div>
-          <p class="text-gray-400 mt-1">Scoring against a struggling defense is expected (e.g. 85%), yielding a small incremental weight (<strong>+2.2 pts</strong>).</p>
-        </div>
-      </div>
-      <p class="text-xs text-gray-400 pt-1">
-        Over 38 matchdays, each club's rating deviation from the 1000 baseline represents their cumulative <strong>Weight Adjusted Goal Difference</strong>.
-      </p>
-    </section>
-
-    <!-- Section 1: Core Philosophy -->
-    <section class="glass-card rounded-2xl p-7 space-y-4">
-      <div class="flex items-center gap-3">
-        <span class="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 font-bold flex items-center justify-center text-sm">1</span>
-        <h2 class="text-xl font-bold text-white">The Core Philosophy: Goals as 1v1 Events</h2>
-      </div>
-      <p class="text-sm text-gray-300 leading-relaxed">
-        In standard league standings, a match is reduced to a binary win, draw, or loss (3 points or 1 point). This introduces blind spots:
-      </p>
-      <ul class="text-sm text-gray-300 space-y-2 list-disc list-inside pl-2">
-        <li>A narrow 1–0 victory yields the exact same points as a comprehensive 5–0 masterclass.</li>
-        <li>Beating the league champions is rewarded the same as beating a struggling relegation candidate.</li>
-        <li>Conceding late goals when ahead carries no standing penalty if the match is still won.</li>
-      </ul>
-      <p class="text-sm text-gray-300 leading-relaxed">
-        <strong>Goal-Elo</strong> re-imagines every goal scored as a distinct contest where the scorer receives a "win" and the conceder receives a "loss", weighted by the relative strength of the two teams at that moment.
-      </p>
-    </section>
-
-    <!-- Section 2: Mathematical Foundation -->
+    <!-- Section 1: The Core Formula -->
     <section class="glass-card rounded-2xl p-7 space-y-6">
       <div class="flex items-center gap-3">
-        <span class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center text-sm">2</span>
-        <h2 class="text-xl font-bold text-white">The Mathematical Formulation</h2>
+        <span class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center text-sm">1</span>
+        <h2 class="text-xl font-bold text-white">The Core Elo Equations</h2>
       </div>
 
       <div class="space-y-3">
-        <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">Baseline Starting Rating</h3>
+        <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">1. Baseline Setup</h3>
         <p class="text-sm text-gray-300">
-          Every club begins Gameweek 0 with a neutral rating of <strong class="text-white font-mono">R₀ = 1000.0</strong>. The total rating pool across all 20 clubs is strictly conserved at <strong class="text-white font-mono">20,000 points</strong>.
+          Every club begins Gameweek 0 with a base rating of <strong class="text-white font-mono">R₀ = 1000.0</strong>. Across all 20 Premier League clubs, the total league rating pool is strictly fixed:
         </p>
+        <div class="code-block rounded-xl p-3 text-emerald-300 text-sm overflow-x-auto">
+          Total League Pool = 20 × 1000.0 = 20,000.0 points
+        </div>
       </div>
 
       <div class="space-y-3">
-        <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">Expected Goal Probability</h3>
+        <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">2. Expected Probability Formula</h3>
         <p class="text-sm text-gray-300">
-          Before a goal is scored, the expected probability $E_A$ of Team A outperforming Team B is derived using the standard logistic distribution curve:
+          For any goal exchange between Team A (rating $R_A$) and Team B (rating $R_B$), the expected probability $E_A$ of Team A scoring relative to Team B is defined by the standard logistic distribution:
         </p>
         <div class="code-block rounded-xl p-4 text-emerald-300 text-sm overflow-x-auto">
           E_A = 1 / (1 + 10 ^ ((R_B - R_A) / 400))
         </div>
         <p class="text-xs text-gray-400">
-          If Team A has a 400-point advantage over Team B, Team A is expected to score with approximately 91% probability on any given goal exchange.
+          Symmetrically, Team B's expected probability is: <code class="text-gray-300">E_B = 1 - E_A = 1 / (1 + 10 ^ ((R_A - R_B) / 400))</code>.
         </p>
       </div>
 
       <div class="space-y-3">
-        <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">Zero-Sum Rating Transfer</h3>
+        <h3 class="text-sm font-semibold uppercase tracking-wider text-emerald-400">3. Zero-Sum Rating Transfer Per Goal</h3>
         <p class="text-sm text-gray-300">
           When Team A scores a goal against Team B:
         </p>
-        <div class="code-block rounded-xl p-4 space-y-1 text-sm overflow-x-auto text-gray-200">
-          <div><span class="text-emerald-400">ΔR</span> = K × (1 - E_A)   <span class="text-gray-500">// where K = 15.0</span></div>
-          <div>R_A ← R_A + <span class="text-emerald-400">ΔR</span>       <span class="text-gray-500">// Scorer gains ΔR</span></div>
-          <div>R_B ← R_B - <span class="text-emerald-400">ΔR</span>       <span class="text-gray-500">// Conceder loses ΔR</span></div>
+        <div class="code-block rounded-xl p-4 space-y-1.5 text-sm overflow-x-auto text-gray-200">
+          <div><span class="text-emerald-400">ΔR</span> = K × (1 - E_A)          <span class="text-gray-500">// K = 15.0</span></div>
+          <div>R_A ← R_A + <span class="text-emerald-400">ΔR</span>              <span class="text-gray-500">// Scorer gains ΔR</span></div>
+          <div>R_B ← R_B - <span class="text-emerald-400">ΔR</span>              <span class="text-gray-500">// Conceder loses ΔR</span></div>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-2">
-          <div class="p-3 rounded-lg bg-gray-900 border border-gray-800">
-            <span class="font-bold text-white">Expected Goal (Favorite scores):</span>
-            <p class="text-gray-400 mt-1">High $E_A$ (e.g. 0.85) produces a small transfer (Δ ≈ +2.25 pts).</p>
-          </div>
-          <div class="p-3 rounded-lg bg-gray-900 border border-gray-800">
-            <span class="font-bold text-white">Upset Goal (Underdog scores):</span>
-            <p class="text-gray-400 mt-1">Low $E_A$ (e.g. 0.15) produces a massive transfer (Δ ≈ +12.75 pts).</p>
-          </div>
+        <p class="text-xs text-gray-400">
+          Because Team A gains $+\Delta R$ and Team B loses $-\Delta R$, the net change between the two teams is zero ($\Delta R_A + \Delta R_B = 0$). Points are conserved with zero inflation.
+        </p>
+      </div>
+    </section>
+
+    <!-- Section 2: Numerical Worked Example -->
+    <section class="glass-card rounded-2xl p-7 space-y-4">
+      <div class="flex items-center gap-3">
+        <span class="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 font-bold flex items-center justify-center text-sm">2</span>
+        <h2 class="text-xl font-bold text-white">Worked Numerical Example</h2>
+      </div>
+      <p class="text-sm text-gray-300 leading-relaxed">
+        Consider a match between <strong>Team A (Rating: 1100.0)</strong> and <strong>Team B (Rating: 900.0)</strong>:
+      </p>
+      <div class="code-block rounded-xl p-4 space-y-2 text-xs text-gray-300">
+        <div><strong>Rating Difference:</strong> R_B - R_A = 900.0 - 1100.0 = -200.0</div>
+        <div><strong>Expected Probability E_A:</strong> 1 / (1 + 10 ^ (-200 / 400)) = 1 / (1 + 10 ^ -0.5) ≈ <strong>0.760 (76.0%)</strong></div>
+        <div><strong>Expected Probability E_B:</strong> 1 - 0.760 ≈ <strong>0.240 (24.0%)</strong></div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
+        <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800 space-y-1.5">
+          <div class="font-bold text-white">Scenario 1: Team A Scores</div>
+          <div class="font-mono text-emerald-400">ΔR = 15.0 × (1 - 0.760) = +3.60 pts</div>
+          <p class="text-gray-400">Team A moves to <strong>1103.60</strong>; Team B moves to <strong>896.40</strong>.</p>
+        </div>
+        <div class="p-3.5 rounded-xl bg-gray-900 border border-gray-800 space-y-1.5">
+          <div class="font-bold text-white">Scenario 2: Team B Scores</div>
+          <div class="font-mono text-emerald-400">ΔR = 15.0 × (1 - 0.240) = +11.40 pts</div>
+          <p class="text-gray-400">Team B moves to <strong>911.40</strong>; Team A moves to <strong>1088.60</strong>.</p>
         </div>
       </div>
     </section>
 
-    <!-- Section 3: Half-Time Granularity -->
+    <!-- Section 3: Sequential Half-Time Execution -->
     <section class="glass-card rounded-2xl p-7 space-y-4">
       <div class="flex items-center gap-3">
         <span class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold flex items-center justify-center text-sm">3</span>
-        <h2 class="text-xl font-bold text-white">Half-Time Temporal Resolution</h2>
+        <h2 class="text-xl font-bold text-white">Sequential Half-Time Processing</h2>
       </div>
       <p class="text-sm text-gray-300 leading-relaxed">
-        Instead of aggregating all goals at full-time, the engine uses sequential half-time checkpoints:
+        Matches are evaluated in two chronological stages per fixture:
       </p>
-      <div class="space-y-2 text-xs">
-        <div class="p-3 rounded-lg bg-gray-900 border border-gray-800 flex items-start gap-3">
-          <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Step 1</span>
+      <div class="space-y-2.5 text-xs">
+        <div class="p-3.5 rounded-lg bg-gray-900 border border-gray-800 flex items-start gap-3">
+          <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Stage 1</span>
           <div>
-            <span class="font-semibold text-white">First Half Updates:</span>
-            <p class="text-gray-400 mt-0.5">Applies goals from <code class="text-gray-300">HTHG</code> and <code class="text-gray-300">HTAG</code> against pre-match ratings to yield intermediate half-time ratings.</p>
+            <span class="font-semibold text-white">First Half Update:</span>
+            <p class="text-gray-400 mt-0.5">Goals from <code class="text-gray-300">HTHG</code> and <code class="text-gray-300">HTAG</code> are applied against pre-match ratings, producing intermediate ratings at the 45-minute mark.</p>
           </div>
         </div>
-        <div class="p-3 rounded-lg bg-gray-900 border border-gray-800 flex items-start gap-3">
-          <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Step 2</span>
+        <div class="p-3.5 rounded-lg bg-gray-900 border border-gray-800 flex items-start gap-3">
+          <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Stage 2</span>
           <div>
-            <span class="font-semibold text-white">Second Half Updates:</span>
-            <p class="text-gray-400 mt-0.5">Calculates second half goals <code class="text-gray-300">(FTHG - HTHG)</code> and <code class="text-gray-300">(FTAG - HTAG)</code> and applies them against the intermediate half-time ratings.</p>
+            <span class="font-semibold text-white">Second Half Update:</span>
+            <p class="text-gray-400 mt-0.5">Second half goals <code class="text-gray-300">(FTHG - HTHG)</code> and <code class="text-gray-300">(FTAG - HTAG)</code> are applied starting from the intermediate half-time ratings.</p>
           </div>
         </div>
-        <div class="p-3 rounded-lg bg-gray-900 border border-gray-800 flex items-start gap-3">
-          <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Step 3</span>
+        <div class="p-3.5 rounded-lg bg-gray-900 border border-gray-800 flex items-start gap-3">
+          <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Stage 3</span>
           <div>
             <span class="font-semibold text-white">Gameweek Checkpoint:</span>
-            <p class="text-gray-400 mt-0.5">Stores the final post-match rating and records the matchday delta in each team's trajectory curve.</p>
+            <p class="text-gray-400 mt-0.5">Post-match ratings are recorded, and the matchday delta is appended to each club's cumulative trajectory curve.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Section 4: Symmetry & Neutrality -->
+    <!-- Section 4: Symmetry & Fixture Neutrality -->
     <section class="glass-card rounded-2xl p-7 space-y-4">
       <div class="flex items-center gap-3">
         <span class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 font-bold flex items-center justify-center text-sm">4</span>
-        <h2 class="text-xl font-bold text-white">Symmetry & No Artificial Home Bias</h2>
+        <h2 class="text-xl font-bold text-white">Symmetry & Parameter Specifications</h2>
       </div>
-      <p class="text-sm text-gray-300 leading-relaxed">
-        Because every team in the Premier League plays exactly 19 home games and 19 away games across the 38-game schedule, the system applies <strong>pure neutral rating evaluations</strong> without an artificial home-field constant. This ensures pure symmetry where home and away balance naturally over the course of the full season.
-      </p>
-    </section>
-
-    <!-- Section 5: Interpretation Guide -->
-    <section class="glass-card rounded-2xl p-7 space-y-4">
-      <div class="flex items-center gap-3">
-        <span class="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-400 font-bold flex items-center justify-center text-sm">5</span>
-        <h2 class="text-xl font-bold text-white">Rating Interpretation Guide</h2>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-        <div class="p-3 rounded-xl bg-gray-900 border border-gray-800 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-emerald-400">&gt; 1100 Rating</span>
-            <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-semibold">Title Contender</span>
-          </div>
-          <p class="text-gray-400">Elite attack and resolute defense. Consistently converts chances and rarely concedes against mid/lower-tier opposition.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+        <div class="p-4 rounded-xl bg-gray-900 border border-gray-800 space-y-1">
+          <div class="font-bold text-white text-sm">K-Factor ($K = 15.0$)</div>
+          <p class="text-gray-400">Controls the maximum possible rating exchange per goal event. Calibrated to allow meaningful movement per match without extreme variance.</p>
         </div>
-        <div class="p-3 rounded-xl bg-gray-900 border border-gray-800 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-indigo-400">1020 – 1100 Rating</span>
-            <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-semibold">European Tier</span>
-          </div>
-          <p class="text-gray-400">Top-six quality. Consistently outperforms the league average with a net positive rating balance.</p>
-        </div>
-        <div class="p-3 rounded-xl bg-gray-900 border border-gray-800 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-gray-300">980 – 1020 Rating</span>
-            <span class="text-[10px] px-2 py-0.5 rounded bg-gray-800 text-gray-300 font-semibold">Mid-Table</span>
-          </div>
-          <p class="text-gray-400">Balanced performance around the league median baseline of 1000. Wins and losses largely offset.</p>
-        </div>
-        <div class="p-3 rounded-xl bg-gray-900 border border-gray-800 space-y-1">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-rose-400">&lt; 920 Rating</span>
-            <span class="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-semibold">Relegation Battle</span>
-          </div>
-          <p class="text-gray-400">Persistent defensive vulnerabilities and heavy point bleed across successive matchdays.</p>
+        <div class="p-4 rounded-xl bg-gray-900 border border-gray-800 space-y-1">
+          <div class="font-bold text-white text-sm">Fixture Symmetry</div>
+          <p class="text-gray-400">Calculations treat home and away teams neutrally without an artificial offset constant, matching the balanced 19 home and 19 away schedule.</p>
         </div>
       </div>
     </section>
@@ -768,7 +709,7 @@ def get_methodology():
     <!-- Navigation CTA -->
     <div class="text-center pt-4">
       <a href="/" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-sm transition shadow-lg shadow-emerald-500/20">
-        ← Back to Live Dashboard
+        &larr; Back to Live Dashboard
       </a>
     </div>
   </main>
