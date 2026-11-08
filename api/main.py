@@ -246,13 +246,12 @@ def get_dashboard():
           </div>
         </div>
         <div class="overflow-x-auto mt-4">
-          <table class="w-full text-left text-sm text-gray-300">
-            <thead class="text-xs uppercase bg-gray-900/60 text-gray-400">
+          <table class="w-full text-left text-sm text-gray-300 border-collapse">
+            <thead class="text-xs uppercase bg-gray-900 text-gray-400">
               <tr>
-                <th class="py-3 px-3">WAGD</th>
-                <th class="py-3 px-3">Team</th>
-                <th class="py-3 px-3 text-right">Rating</th>
-                <th class="py-3 px-3 text-right">WAGD Δ</th>
+                <th class="py-3 px-3 sticky left-0 z-20 bg-gray-900 w-12 text-center">#</th>
+                <th class="py-3 px-3 sticky left-12 z-20 bg-gray-900 shadow-[2px_0_5px_rgba(0,0,0,0.4)] border-r border-gray-800">Team</th>
+                <th class="py-3 px-3 text-right">WAGD</th>
                 <th class="py-3 px-3 text-center">Table Pos</th>
                 <th class="py-3 px-3 text-center">Variance</th>
                 <th class="py-3 px-3 text-center">Pts</th>
@@ -398,22 +397,24 @@ def get_dashboard():
               : `<span class="px-2 py-0.5 rounded text-xs text-gray-400 bg-gray-800">=</span>`);
 
         return `
-          <tr data-team="${row.team}" class="hover:bg-gray-800/40 transition cursor-pointer" onclick="isolateTeam('${row.team}')">
-            <td class="py-3 px-3"><span class="px-2 py-0.5 rounded text-xs ${rankBadge}">${row.rank}</span></td>
-            <td class="py-3 px-3 font-semibold text-white flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${getTeamColor(row.team)}"></span>
-              ${row.team}
+          <tr data-team="${row.team}" class="hover:bg-gray-800/40 transition cursor-pointer group" onclick="isolateTeam('${row.team}')">
+            <td class="py-3 px-3 sticky left-0 z-10 bg-gray-900 w-12 text-center group-hover:bg-gray-800 transition"><span class="px-2 py-0.5 rounded text-xs ${rankBadge}">${row.rank}</span></td>
+            <td class="py-3 px-3 font-semibold text-white sticky left-12 z-10 bg-gray-900 shadow-[2px_0_5px_rgba(0,0,0,0.4)] border-r border-gray-800 whitespace-nowrap group-hover:bg-gray-800 transition">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background-color: ${getTeamColor(row.team)}"></span>
+                <span>${row.team}</span>
+              </div>
             </td>
-            <td class="py-3 px-3 text-right font-mono font-bold text-gray-100">${row.rating.toFixed(1)}</td>
-            <td class="py-3 px-3 text-right font-mono">
+            <td class="py-3 px-3 text-right font-mono whitespace-nowrap">
               <span class="px-2 py-0.5 rounded text-xs font-semibold ${deltaClass}">${sign}${row.delta_total.toFixed(1)}</span>
+              <span class="text-[11px] text-gray-400 font-normal ml-1">(${row.rating.toFixed(0)})</span>
             </td>
-            <td class="py-3 px-3 text-center font-mono text-gray-300">#${row.official_rank}</td>
-            <td class="py-3 px-3 text-center">${diffBadge}</td>
-            <td class="py-3 px-3 text-center font-mono font-bold text-gray-200">${row.official_points}</td>
-            <td class="py-3 px-3 text-center text-gray-300">${row.goals_for}</td>
-            <td class="py-3 px-3 text-center text-gray-400">${row.goals_against}</td>
-            <td class="py-3 px-3 text-center font-semibold ${row.goal_difference >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+            <td class="py-3 px-3 text-center font-mono text-gray-300 whitespace-nowrap">#${row.official_rank}</td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">${diffBadge}</td>
+            <td class="py-3 px-3 text-center font-mono font-bold text-gray-200 whitespace-nowrap">${row.official_points}</td>
+            <td class="py-3 px-3 text-center text-gray-300 whitespace-nowrap">${row.goals_for}</td>
+            <td class="py-3 px-3 text-center text-gray-400 whitespace-nowrap">${row.goals_against}</td>
+            <td class="py-3 px-3 text-center font-semibold whitespace-nowrap ${row.goal_difference >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
               ${row.goal_difference > 0 ? '+' : ''}${row.goal_difference}
             </td>
           </tr>
