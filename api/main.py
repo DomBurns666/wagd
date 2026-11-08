@@ -141,28 +141,31 @@ def get_dashboard():
 <body class="min-h-screen">
   <!-- Header -->
   <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div>
-          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-            WAGD <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Weight Adjusted Goal Difference</span>
-          </h1>
-          <p class="text-xs text-gray-400">Premier League Dynamic Ratings via Quality-Weighted Goal Exchanges</p>
-        </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div>
+        <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex flex-wrap items-center gap-1.5 sm:gap-2">
+          WAGD 
+          <span class="text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+            <span class="hidden sm:inline">Weight Adjusted Goal Difference</span>
+            <span class="sm:hidden">Weight Adjusted GD</span>
+          </span>
+        </h1>
+        <p class="text-[11px] sm:text-xs text-gray-400">Premier League Dynamic Ratings via Quality-Weighted Goal Exchanges</p>
       </div>
-      <div class="flex items-center gap-4">
+      <div class="flex items-center justify-between sm:justify-end gap-3 w-full md:w-auto">
         <div class="flex items-center gap-2">
           <label for="season-select" class="text-xs text-gray-400 font-medium">Season:</label>
           <select id="season-select" onchange="onSeasonChange()" class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-700 focus:outline-none focus:border-emerald-500 cursor-pointer transition">
           </select>
         </div>
-        <div class="h-5 w-px bg-gray-800 hidden sm:block"></div>
-        <a href="/" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-          Dashboard
-        </a>
-        <a href="/methodology" class="text-xs font-medium text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700">
-          Methodology
-        </a>
+        <div class="flex items-center gap-2">
+          <a href="/" class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            Dashboard
+          </a>
+          <a href="/methodology" class="text-xs font-medium text-gray-400 hover:text-white transition px-2.5 sm:px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700">
+            Methodology
+          </a>
+        </div>
       </div>
     </div>
   </header>
@@ -193,25 +196,42 @@ def get_dashboard():
     </div>
 
     <!-- Interactive Trajectory Chart -->
-    <div class="glass-card rounded-2xl p-6 shadow-xl">
+    <div class="glass-card rounded-2xl p-4 sm:p-6 shadow-xl">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
         <div>
-          <div class="flex items-center gap-3">
-            <h2 class="text-lg font-bold text-white">Rating Trajectories Across 38 Matchdays</h2>
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h2 class="text-base sm:text-lg font-bold text-white">Rating Trajectories Across 38 Matchdays</h2>
             <span id="active-filter-indicator" class="hidden text-xs px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"></span>
           </div>
-          <p class="text-xs text-gray-400">Click any line or table row to isolate a club (click again to restore all)</p>
+          <p class="text-xs text-gray-400 mt-0.5">Click any line or table row to isolate a club</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button onclick="filterPresets('all')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition">Show All</button>
           <button onclick="filterPresets('top5')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition">Top 5</button>
           <button onclick="filterPresets('bottom5')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition">Bottom 5</button>
-          <button onclick="filterPresets('big6')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition">Traditional Big 6</button>
+          <button onclick="filterPresets('big6')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition">Big 6</button>
           <button onclick="filterPresets('none')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition">Clear</button>
+          <button onclick="openLandscapeModal()" class="text-xs px-2.5 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 transition ml-auto sm:ml-0 font-medium">
+            <span>⛶</span> Rotate / Landscape
+          </button>
         </div>
       </div>
-      <div class="h-[460px] w-full pt-4">
-        <canvas id="ratingsChart"></canvas>
+
+      <!-- Touch scroll helper for mobile portrait -->
+      <div class="sm:hidden flex items-center justify-between text-[11px] text-gray-400 pt-2.5 pb-1">
+        <span class="flex items-center gap-1 text-emerald-400/90 font-medium">
+          <span class="text-sm">↔</span> Swipe chart horizontally across 38 matchdays
+        </span>
+        <button onclick="openLandscapeModal()" class="text-[11px] text-emerald-300 underline font-semibold">
+          Landscape ↗
+        </button>
+      </div>
+
+      <!-- Scrollable Chart Container -->
+      <div class="overflow-x-auto -mx-2 sm:mx-0 px-2 sm:px-0">
+        <div class="min-w-[680px] sm:min-w-0 h-[420px] sm:h-[460px] pt-2">
+          <canvas id="ratingsChart"></canvas>
+        </div>
       </div>
     </div>
 
@@ -260,6 +280,27 @@ def get_dashboard():
       </div>
     </div>
   </main>
+
+  <!-- Fullscreen Landscape Modal -->
+  <div id="landscape-modal" class="fixed inset-0 z-50 bg-[#0b0f19]/98 backdrop-blur-xl hidden flex flex-col p-3 sm:p-6">
+    <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+      <div class="flex items-center gap-2 sm:gap-3">
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">⛶ Landscape View</span>
+        <span id="modal-season-label" class="text-xs text-gray-300 font-bold"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="filterPresets('all')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700">All</button>
+        <button onclick="filterPresets('top5')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700">Top 5</button>
+        <button onclick="filterPresets('big6')" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700">Big 6</button>
+        <button onclick="closeLandscapeModal()" class="text-xs px-3 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 font-bold transition ml-2">
+          ✕ Close
+        </button>
+      </div>
+    </div>
+    <div class="flex-1 w-full h-full min-h-0 pt-3">
+      <canvas id="modalRatingsChart"></canvas>
+    </div>
+  </div>
 
   <footer class="mt-16 border-t border-gray-800 py-6 text-center text-xs text-gray-500">
     WAGD Football Analytics Engine • Built with FastAPI, Chart.js & Tailwind CSS
@@ -479,7 +520,7 @@ def get_dashboard():
           scales: {
             x: {
               grid: { color: 'rgba(55, 65, 81, 0.2)' },
-              ticks: { color: '#9ca3af', font: { size: 10 } }
+              ticks: { color: '#9ca3af', font: { size: 10 }, autoSkip: true, maxTicksLimit: 20 }
             },
             y: {
               grid: { color: 'rgba(55, 65, 81, 0.25)' },
@@ -493,6 +534,7 @@ def get_dashboard():
     }
 
     let isolatedTeam = null;
+    let modalChartInstance = null;
 
     function isolateTeam(team) {
       if (!chartInstance) return;
@@ -518,6 +560,19 @@ def get_dashboard():
         updateFilterBadge(team);
       }
       chartInstance.update();
+
+      if (modalChartInstance) {
+        modalChartInstance.data.datasets.forEach(ds => {
+          if (isolatedTeam === null) {
+            ds.hidden = false;
+            ds.borderWidth = 2;
+          } else {
+            ds.hidden = ds.label !== isolatedTeam;
+            ds.borderWidth = ds.label === isolatedTeam ? 3.5 : 2;
+          }
+        });
+        modalChartInstance.update();
+      }
     }
 
     function updateFilterBadge(team) {
@@ -556,7 +611,110 @@ def get_dashboard():
         else if (type === 'big6') ds.hidden = !big6.includes(ds.label);
       });
       chartInstance.update();
+
+      if (modalChartInstance) {
+        modalChartInstance.data.datasets.forEach(ds => {
+          ds.borderWidth = 2;
+          if (type === 'all') ds.hidden = false;
+          else if (type === 'none') ds.hidden = true;
+          else if (type === 'top5') ds.hidden = !top5Teams.includes(ds.label);
+          else if (type === 'bottom5') ds.hidden = !bottom5Teams.includes(ds.label);
+          else if (type === 'big6') ds.hidden = !big6.includes(ds.label);
+        });
+        modalChartInstance.update();
+      }
     }
+
+    function openLandscapeModal() {
+      const modal = document.getElementById('landscape-modal');
+      modal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+      document.getElementById('modal-season-label').innerText = currentSeason ? `${currentSeason} Season` : '';
+
+      // Attempt HTML5 Fullscreen API
+      if (modal.requestFullscreen) {
+        modal.requestFullscreen().catch(() => {});
+      } else if (modal.webkitRequestFullscreen) {
+        modal.webkitRequestFullscreen();
+      }
+
+      const ctx = document.getElementById('modalRatingsChart').getContext('2d');
+      if (modalChartInstance) {
+        modalChartInstance.destroy();
+      }
+
+      const datasets = chartInstance.data.datasets.map(ds => ({
+        ...ds,
+        data: [...ds.data]
+      }));
+
+      modalChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartInstance.data.labels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          },
+          onClick: (event, elements, chart) => {
+            const points = chart.getElementsAtEventForMode(event, 'nearest', { intersect: false }, true);
+            if (points && points.length > 0) {
+              const datasetIndex = points[0].datasetIndex;
+              const team = chart.data.datasets[datasetIndex].label;
+              isolateTeam(team);
+            }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: {
+                boxWidth: 10,
+                color: '#9ca3af',
+                font: { size: 10 },
+                padding: 6
+              }
+            },
+            tooltip: chartInstance.options.plugins.tooltip
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(55, 65, 81, 0.2)' },
+              ticks: { color: '#9ca3af', font: { size: 10 }, autoSkip: true, maxTicksLimit: 20 }
+            },
+            y: {
+              grid: { color: 'rgba(55, 65, 81, 0.25)' },
+              ticks: { color: '#9ca3af', font: { size: 11 } },
+              suggestedMin: 850,
+              suggestedMax: 1150
+            }
+          }
+        }
+      });
+    }
+
+    function closeLandscapeModal() {
+      const modal = document.getElementById('landscape-modal');
+      modal.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      if (modalChartInstance) {
+        modalChartInstance.destroy();
+        modalChartInstance = null;
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLandscapeModal();
+    });
 
     async function init() {
       try {
@@ -616,20 +774,18 @@ def get_methodology():
 <body class="min-h-screen">
   <!-- Header -->
   <header class="border-b border-gray-800 bg-gray-900/50 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div>
-          <a href="/" class="text-lg font-bold tracking-tight text-white flex items-center gap-2 hover:text-emerald-400 transition">
-            WAGD <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Methodology</span>
-          </a>
-          <p class="text-xs text-gray-400">Weight Adjusted Goal Difference • Formula & Mechanics</p>
-        </div>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3">
+      <div>
+        <a href="/" class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2 hover:text-emerald-400 transition">
+          WAGD <span class="text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Methodology</span>
+        </a>
+        <p class="text-[11px] sm:text-xs text-gray-400">Weight Adjusted Goal Difference • Formula & Mechanics</p>
       </div>
-      <div class="flex items-center gap-3">
-        <a href="/" class="text-xs font-medium text-gray-400 hover:text-white transition px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700">
+      <div class="flex items-center gap-2">
+        <a href="/" class="text-xs font-medium text-gray-400 hover:text-white transition px-2.5 sm:px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700">
           ← Dashboard
         </a>
-        <a href="/methodology" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+        <a href="/methodology" class="text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
           Methodology
         </a>
       </div>
